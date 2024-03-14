@@ -16,6 +16,8 @@
 \alias{glmICP}
 \alias{cotramICP}
 \alias{rangerICP}
+\alias{survforestICP}
+\alias{qrfICP}
 \title{Aliases for implemented model classes}
 \usage{
 BoxCoxICP(
@@ -241,6 +243,38 @@ rangerICP(
   mandatory = NULL,
   ...
 )
+
+survforestICP(
+  formula,
+  data,
+  env,
+  verbose = TRUE,
+  type = "residual",
+  test = "gcm.test",
+  controls = NULL,
+  alpha = 0.05,
+  baseline_fixed = TRUE,
+  greedy = FALSE,
+  max_size = NULL,
+  mandatory = NULL,
+  ...
+)
+
+qrfICP(
+  formula,
+  data,
+  env,
+  verbose = TRUE,
+  type = "residual",
+  test = "gcm.test",
+  controls = NULL,
+  alpha = 0.05,
+  baseline_fixed = TRUE,
+  greedy = FALSE,
+  max_size = NULL,
+  mandatory = NULL,
+  ...
+)
 }
 \arguments{
 \item{formula}{A \code{formula} including response and covariate terms.}
@@ -289,7 +323,9 @@ Object of type \code{"dICP"}. See \code{\link[tramicp]{dicp}}
 ICP for Box-Cox-type transformed normal regression, parametric
     and semiparametric survival models, continuous outcome logistic
     regression, linear regression, cumulative ordered regression, generalized
-    linear models; and nonparametric ICP via ranger.
+    linear models; and nonparametric ICP via ranger. While TRAMICP based on
+    quantile and survival random forests is also supported, for these methods
+    it comes without theoretical guarantees as of yet.
 }
 \examples{
 set.seed(123)
@@ -301,6 +337,8 @@ set.seed(123)
 d <- dgp_dicp(mod = "weibull", n = 300)
 SurvregICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
 ### or
+library("survival")
+d$Y <- Surv(d$Y)
 survregICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
 CoxphICP(Y ~ X2, data = d, env = ~ E)
 coxphICP(Y ~ X2, data = d, env = ~ E)
@@ -350,6 +388,19 @@ cotramICP(Y ~ X2, data = d, env = ~ E)
 set.seed(123)
 d <- dgp_dicp(mod = "binary", n = 300)
 rangerICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
+}
+
+\donttest{
+set.seed(12)
+d <- dgp_dicp(mod = "coxph", n = 3e2)
+d$Y <- survival::Surv(d$Y, sample(0:1, 3e2, TRUE, prob = c(0.1, 0.9)))
+survforestICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
+}
+
+\donttest{
+set.seed(12)
+d <- dgp_dicp(mod = "boxcox", n = 3e2)
+qrfICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
 }
 
 }

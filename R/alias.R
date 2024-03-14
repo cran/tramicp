@@ -6,7 +6,9 @@
 #' @description ICP for Box-Cox-type transformed normal regression, parametric
 #'     and semiparametric survival models, continuous outcome logistic
 #'     regression, linear regression, cumulative ordered regression, generalized
-#'     linear models; and nonparametric ICP via ranger.
+#'     linear models; and nonparametric ICP via ranger. While TRAMICP based on
+#'     quantile and survival random forests is also supported, for these methods
+#'     it comes without theoretical guarantees as of yet.
 #' @rdname tramicp-alias
 #'
 #' @inheritParams dicp
@@ -45,6 +47,8 @@ BoxCoxICP <- function(formula, data, env, verbose = TRUE, type = "residual",
 #' d <- dgp_dicp(mod = "weibull", n = 300)
 #' SurvregICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
 #' ### or
+#' library("survival")
+#' d$Y <- Surv(d$Y)
 #' survregICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
 #' CoxphICP(Y ~ X2, data = d, env = ~ E)
 #' coxphICP(Y ~ X2, data = d, env = ~ E)
@@ -315,14 +319,10 @@ glmICP <- function(formula, data, env, verbose = TRUE, type = "residual",
   call <- match.call()
   if (is.character(test))
     test <- match.arg(test, .implemented_tests())
-  if (!is.null(fam <- list(...)$family) && (identical(fam, stats::binomial) ||
-                                            fam == "binomial")) {
-    resid <- "residuals.binglm"
-  }
   if (is.null(controls))
     controls <- dicp_controls(type, test, alpha = alpha,
                               baseline_fixed = baseline_fixed,
-                              residuals = resid)
+                              residuals = "residuals.binglm")
   ret <- dicp(formula = formula, data = data, env = env, modFUN = stats::glm,
               verbose = verbose, type = type, test = test, controls = controls,
               alpha = alpha, baseline_fixed = baseline_fixed, greedy = greedy,
@@ -378,6 +378,63 @@ rangerICP <- function(formula, data, env, verbose = TRUE, type = "residual",
                       mandatory = NULL, ...) {
   call <- match.call()
   ret <- dicp(formula = formula, data = data, env = env, modFUN = RANGER,
+              verbose = verbose, type = type, test = test, controls = controls,
+              alpha = alpha, baseline_fixed = baseline_fixed, greedy = greedy,
+              max_size = max_size, mandatory = mandatory, ... = ...)
+  ret$call <- call
+  ret
+}
+
+#' nonparametric ICP for right-censored observations with survival forest GCM
+#' @rdname tramicp-alias
+#'
+#' @inheritParams dicp
+#'
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' set.seed(12)
+#' d <- dgp_dicp(mod = "coxph", n = 3e2)
+#' d$Y <- survival::Surv(d$Y, sample(0:1, 3e2, TRUE, prob = c(0.1, 0.9)))
+#' survforestICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
+#' }
+#'
+survforestICP <- function(formula, data, env, verbose = TRUE, type = "residual",
+                          test = "gcm.test", controls = NULL, alpha = 0.05,
+                          baseline_fixed = TRUE, greedy = FALSE, max_size = NULL,
+                          mandatory = NULL, ...) {
+  call <- match.call()
+  message("Note: `survforestICP()` does not come with theoretical guarantees.")
+  ret <- dicp(formula = formula, data = data, env = env, modFUN = survforest,
+              verbose = verbose, type = type, test = test, controls = controls,
+              alpha = alpha, baseline_fixed = baseline_fixed, greedy = greedy,
+              max_size = max_size, mandatory = mandatory, ... = ...)
+  ret$call <- call
+  ret
+}
+
+#' nonparametric ICP with quantile forest GCM
+#' @rdname tramicp-alias
+#'
+#' @inheritParams dicp
+#'
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' set.seed(12)
+#' d <- dgp_dicp(mod = "boxcox", n = 3e2)
+#' qrfICP(Y ~ X1 + X2 + X3, data = d, env = ~ E)
+#' }
+#'
+qrfICP <- function(formula, data, env, verbose = TRUE, type = "residual",
+                   test = "gcm.test", controls = NULL, alpha = 0.05,
+                   baseline_fixed = TRUE, greedy = FALSE, max_size = NULL,
+                   mandatory = NULL, ...) {
+  call <- match.call()
+  message("Note: `qrfICP()` does not come with theoretical guarantees.")
+  ret <- dicp(formula = formula, data = data, env = env, modFUN = qrf,
               verbose = verbose, type = type, test = test, controls = controls,
               alpha = alpha, baseline_fixed = baseline_fixed, greedy = greedy,
               max_size = max_size, mandatory = mandatory, ... = ...)

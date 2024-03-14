@@ -129,10 +129,7 @@ intersect_intervals <- function(...) {
 
 #' @method residuals binglm
 residuals.binglm <- function(object, ...) {
-  resp <- stats::model.response(stats::model.frame(object))
-  success <- if (is.factor(resp)) levels(resp)[2] else sort(unique(resp))[2]
-    y <- c(0, 1)[1 + as.numeric(resp == success)]
-  y - stats::predict(object, type = "response")
+  stats::residuals.glm(object, type = "response")
 }
 
 .check_depth <- function(x) {
@@ -184,7 +181,7 @@ residuals.binglm <- function(object, ...) {
   res <- lapply(terms, \(term) suppressWarnings(
     max(pvals[!grepl(term, names(pvals), fixed = TRUE)], na.rm = TRUE)))
   ret <- structure(unlist(res), names = terms)
-  if (all(ret < alpha))
+  if (all(pvals < alpha, na.rm = TRUE) & length(ret) > 1)
     ret[] <- 1
   ret
 }
@@ -308,4 +305,72 @@ residuals.ranger <- function(object, newdata = NULL, newy = NULL, ...) {
   if (inherits(ret, "try-error"))
     return(character(0))
   ret
+}
+
+# Survival and quantile RF
+
+survforest <- function(formula, data, ...) {
+  tms <- .get_terms(formula)
+  if (identical(tms$me, character(0))) {
+    return(survival::coxph(formula, data))
+  }
+  rf <- ranger::ranger(formula, data, ...)
+  class(rf) <- c("survforest", class(rf))
+  rf$y <- stats::model.response(stats::model.frame(formula, data))
+  rf$data <- data
+  rf
+}
+
+#' @exportS3Method residuals survforest
+residuals.survforest <- function(object, ...) {
+  times <- object$y[, 1]
+  status <- object$y[, 2]
+  pred <- stats::predict(object, data = object$data)
+  idx <- sapply(times, \(x) which.min(abs(x - pred$unique.death.times))[1])
+  preds <- pred$survival
+  ipreds <- sapply(seq_len(nrow(preds)), \(smpl) {
+    -log(preds[smpl, idx[smpl]])
+  })
+  status - ipreds
+}
+
+qrf <- \(formula, data, ...) {
+  rY <- stats::model.response(stats::model.frame(formula, data))
+  tms <- .get_terms(formula)
+  if (identical(tms$me, character(0))) {
+    ret <- list(m = stats::ecdf(rY), data = data, response = rY,
+                unconditional = TRUE)
+    class(ret) <- c("qrf")
+    return(ret)
+  }
+  rf <- ranger::ranger(formula, data, ...)
+  rf$response <- rY
+  rf$data <- data
+  rf$unconditional <- FALSE
+  class(rf) <- c("qrf", class(rf))
+  rf
+}
+
+#' @exportS3Method predict qrf
+predict.qrf <- \(object, data, ...) {
+  if (object$unconditional)
+    return(object$m(object$response))
+  class(object) <- class(object)[-1]
+  tn <- stats::predict(object, data = data, type = "terminalNodes")$predictions
+  K <- matrix(0, nrow = N <- nrow(tn), ncol = N)
+  for (tree in seq_len(B <- object$num.trees)) {
+    K <- K + sapply(seq_len(nrow(tn)), \(obs) {
+      as.numeric(tn[obs, tree] == tn[, tree])
+    }, simplify = "matrix")
+  }
+  K <- K / B
+  diag(K) <- 0
+  K <- K / pmax(colSums(K), .Machine$double.eps)
+  pred <- \(y) mean(K %*% as.numeric(object$response <= y))
+  sapply(object$response, pred)
+}
+
+#' @exportS3Method residuals qrf
+residuals.qrf <- \(object, ...) {
+  2 * predict.qrf(object, object$data) - 1
 }
