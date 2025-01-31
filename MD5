@@ -1,4 +1,4 @@
-5d525c4141fb24f81bffadd660d221e9 *DESCRIPTION
+b21562d6be5e67b7af97966d58236751 *DESCRIPTION
 87bbb2b2e92e87c75bbd1369e8fd3f98 *NAMESPACE
 b94231a2cf30f6cbc1d7da77202e22e6 *R/alias.R
 b8bf164fce1e55b435fd60ae6b67da5f *R/boostrap-stability.R
@@ -7,10 +7,10 @@ b3923230b96b4aa0a498dc734ad9abc0 *R/controls.R
 35c690076af486c4988e86ffaf530ccb *R/helpers.R
 7918d523dbcb8d104221b181b4c05d95 *R/invariance-types.R
 d8827edbb242c3ec907b26ee14cf44a6 *R/methods.R
-678d5bfb15106bb0b5b445e8acd02e30 *R/tests.R
+20704147696263c46efdc567a2af0af0 *R/tests.R
 67722902b9592c98c4e3300994540e0d *R/tram-sim.R
-08426fc98a54520516be978318f6c980 *R/tramicp.R
-20c8d3f97d93e2e318a22508275b5a02 *build/partial.rdb
+f3e0c2409ceda5c231a80c56c45a8111 *R/tramicp.R
+76161b65639451c966be75488458b3c3 *build/partial.rdb
 20ea6e052a5b798fd68a35a71c73d0c5 *man/bootstrap_stability.Rd
 3115c939b6e6b2532e9c0983e6c8e2a9 *man/dgp_dicp.Rd
 d7eb6f6aa1634d8e536f8e50ce80500d *man/dicp.Rd
